@@ -1,0 +1,39 @@
+# Dataset folders (too large for GitHub)
+archive/
+dataset_split/
+
+# Trained model (too large for GitHub — use Git LFS or Google Drive)
+*.keras
+*.h5
+
+# Generated output images (optional to push)
+confusion_matrix.png
+training_history.png
+prediction_result.png
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.code-workspace
+
+# Windows system files
+Thumbs.db
+desktop.ini
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
