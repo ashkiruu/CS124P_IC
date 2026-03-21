@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoScan | Real-Time Waste AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans">
+
+    <div class="max-w-5xl mx-auto px-4 py-6 md:py-12">
+        <header class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter text-green-400">ECOSCAN <span class="text-white">AI</span></h1>
+                <p class="text-slate-400 text-sm">Real-time MobileNetV2 Classification</p>
+            </div>
+            <div id="statusIndicator" class="hidden md:block px-4 py-1 bg-slate-800 rounded-full border border-slate-700 text-xs text-green-400 animate-pulse">
+                ● LIVE FEED
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 relative">
+                <div class="rounded-3xl overflow-hidden border-4 border-slate-800 shadow-2xl bg-black aspect-video flex items-center justify-center">
+                    <img src="{{ url_for('video_feed') }}" class="w-full h-full object-cover" alt="Webcam Stream">
+                </div>
+                
+                <div class="absolute top-4 left-4">
+                    <div class="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
+                        <span id="mainLabel" class="text-xl font-bold text-green-400 tracking-wide">Initializing...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 backdrop-blur-sm">
+                    <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Top Predictions</h2>
+                    
+                    <div id="top3List" class="space-y-4">
+                        <p class="text-slate-500 text-sm italic">Waiting for camera data...</p>
+                    </div>
+                </div>
+
+                <div class="bg-green-500/10 p-6 rounded-3xl border border-green-500/20">
+                    <h3 class="text-green-400 font-bold mb-2 text-sm">Optimization Active</h3>
+                    <p class="text-[11px] text-green-200/70 leading-relaxed uppercase tracking-wider">
+                        Smoothing: 10 Frames <br>
+                        Inference: Every 3rd Frame
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        setInterval(async () => {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+                
+                // 1. Update Main Label
+                const mainLabel = document.getElementById('mainLabel');
+                if (data.class) {
+                    mainLabel.innerText = `${data.class.toUpperCase()} (${(data.conf * 100).toFixed(1)}%)`;
+                    // Change color to orange if confidence is low
+                    mainLabel.className = data.conf > 0.6 
+                        ? "text-xl font-bold text-green-400 tracking-wide" 
+                        : "text-xl font-bold text-orange-400 tracking-wide";
+                }
+
+                // 2. Update Top 3 List with Bars
+                const list = document.getElementById('top3List');
+                if (data.top3 && data.top3.length > 0) {
+                    list.innerHTML = data.top3.map((item, index) => `
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium ${index === 0 ? 'text-white' : 'text-slate-400'}">${item[0].toUpperCase()}</span>
+                                <span class="text-slate-500">${(item[1]*100).toFixed(1)}%</span>
+                            </div>
+                            <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-green-500 h-full rounded-full transition-all duration-300" 
+                                     style="width: ${item[1]*100}%"></div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) { 
+                console.log("Connection to backend lost... retrying."); 
+            }
+        }, 200); // Polls every 200ms
+    </script>
+</body>
+</html>

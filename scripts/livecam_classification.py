@@ -270,7 +270,7 @@ def run_webcam(model: tf.keras.Model):
         we get smooth video (30fps display) with periodic predictions.
         The smoother fills in the gaps between predictions.
     """
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
         print("ERROR: Could not open webcam.")
