@@ -128,13 +128,19 @@ taken with a phone camera under natural lighting.
 ## 📂 Project Structure
 
 ```
+Here is the updated Project Structure section for your README.md. I have integrated the Flask backend and the required templates folder while maintaining the original organization.
+
 CS124P_IC/
 │
+├── app.py                    # Flask Web Server (Real-time & Upload UI)
 ├── data_preprocessing.py     # tf.data pipeline, split, augmentation
 ├── train_model.py            # MobileNetV2 transfer learning + fine-tuning
 ├── model_evaluation.py       # Classification report + confusion matrix
 ├── inference.py              # Single image + batch prediction script
-├── webcam_inference.py       # Real-time webcam classification
+├── webcam_inference.py       # Real-time webcam classification (OpenCV)
+│
+├── templates/                # Flask HTML templates
+│   └── index.html            # Responsive AI Dashboard (Tailwind CSS)
 │
 ├── archive/                  # Raw Kaggle dataset (not pushed to GitHub)
 │   └── standardized_384/     # Pre-resized 384×384 images
@@ -157,7 +163,7 @@ CS124P_IC/
 ├── training_history.png                 # Training curves
 ├── prediction_result.png                # Last inference result
 │
-├── requirements.txt          # Python dependencies
+├── requirements.txt          # Python dependencies (now includes Flask)
 ├── .gitignore
 └── README.md
 ```
@@ -230,7 +236,7 @@ Edit the `IMAGE_PATH` or `test_images` list inside `main()` to test your own ima
 ## 📷 Real-Time Webcam
 
 ```bash
-python webcam_inference.py
+python app.py
 ```
 
 - Hold a waste item in front of your webcam
@@ -279,6 +285,7 @@ opencv-python
 ## 👥 Authors
 
 - **Marcin** — CS124P | Computer Vision & Deep Learning Project
+- **Jherwin** - CS124P | User Interface and Flask
 
 ---
 
