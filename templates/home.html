@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoScan AI | Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center font-sans px-4">
+
+    <div class="max-w-4xl w-full text-center">
+        <header class="mb-12">
+            <h1 class="text-6xl font-black tracking-tighter text-green-400 mb-2">ECOSCAN <span class="text-white">AI</span></h1>
+            <p class="text-slate-400 text-lg uppercase tracking-widest">Select Classification Mode</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <a href="{{ url_for('live_mode') }}" class="group relative bg-slate-800/50 p-8 rounded-3xl border border-slate-700 hover:border-green-400 transition-all duration-300 hover:shadow-[0_0_30px_rgba(74,222,128,0.2)]">
+                <div class="text-5xl mb-4">📷</div>
+                <h2 class="text-2xl font-bold mb-2 group-hover:text-green-400 transition-colors">Real-Time Webcam</h2>
+                <p class="text-slate-400 text-sm">Analyze waste instantly using your camera feed. Optimized for speed.</p>
+                <div class="mt-6 inline-block bg-green-500 text-slate-900 px-6 py-2 rounded-full font-bold text-sm uppercase tracking-tighter">Launch Feed</div>
+            </a>
+
+            <a href="{{ url_for('manual_mode') }}" class="group relative bg-slate-800/50 p-8 rounded-3xl border border-slate-700 hover:border-blue-400 transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+                <div class="text-5xl mb-4">📁</div>
+                <h2 class="text-2xl font-bold mb-2 group-hover:text-blue-400 transition-colors">Manual Upload</h2>
+                <p class="text-slate-400 text-sm">Upload specific photos or run a batch test from the system library.</p>
+                <div class="mt-6 inline-block bg-blue-500 text-white px-6 py-2 rounded-full font-bold text-sm uppercase tracking-tighter">Open Library</div>
+            </a>
+        </div>
+
+        <footer class="mt-16 text-slate-600 text-xs uppercase tracking-widest">
+            MobileNetV2 Transfer Learning • CS124P Project
+        </footer>
+    </div>
+
+</body>
+</html>

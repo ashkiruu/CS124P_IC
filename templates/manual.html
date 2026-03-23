@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoScan | Manual Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto flex flex-col min-h-[90vh]">
+        <header class="mb-8">
+            <h1 class="text-3xl font-black tracking-tighter text-blue-400">ECOSCAN <span class="text-white">MANUAL</span></h1>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
+            
+            <div class="space-y-6">
+                <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700">
+                    <h2 class="text-lg font-bold mb-4">Upload Waste Image</h2>
+                    <form action="{{ url_for('manual_mode') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                        <input type="file" name="file" accept="image/*" 
+                               class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600">
+                        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 py-3 rounded-xl font-bold transition-colors">
+                            Analyze Upload
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700">
+                    <h2 class="text-lg font-bold mb-2">System Batch Test</h2>
+                    <p class="text-slate-400 text-sm mb-4">Run the model against the internal test library.</p>
+                    <form action="{{ url_for('manual_mode') }}" method="POST">
+                        <button type="submit" name="run_batch" value="true" class="w-full border border-slate-600 hover:bg-slate-700 py-3 rounded-xl font-bold transition-colors">
+                            Run Library Batch
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700">
+                {% if result %}
+                    <div class="text-center mb-6">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Analysis Result</p>
+                        <img src="{{ image_url }}" class="mx-auto h-48 rounded-xl border-2 border-slate-700 mb-4 object-cover">
+                        <h3 class="text-3xl font-black {{ 'text-orange-400' if result.is_uncertain else 'text-green-400' }} capitalize">
+                            {{ result.top1_class }}
+                        </h3>
+                        <p class="text-slate-400">{{ result.top1_confidence }}% Confidence</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase">Confidence Breakdown</h4>
+                        {% for class, conf in result.top3 %}
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="capitalize">{{ class }}</span>
+                                <span>{{ conf }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-blue-500 h-full w-[{{ conf }}%]"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                {% elif batch_results %}
+                    <h2 class="text-lg font-bold mb-4">Batch Results</h2>
+                    <div class="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
+                        {% for item in batch_results %}
+                        <div class="bg-slate-900 p-2 rounded-xl border border-slate-700 text-center">
+                            <img src="{{ item.url }}" class="h-20 w-full object-cover rounded-lg mb-2">
+                            <p class="text-[10px] font-bold truncate capitalize">{{ item.top1_class }}</p>
+                            <p class="text-[9px] text-slate-500">{{ item.top1_confidence }}%</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="h-full flex flex-col items-center justify-center text-slate-600 py-20">
+                        <span class="text-5xl mb-4">🖼️</span>
+                        <p>Awaiting Image Upload...</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <footer class="mt-12 mb-8">
+            <a href="{{ url_for('index') }}" 
+               class="inline-flex items-center justify-center px-8 py-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl font-bold transition-all duration-200 group">
+                <span class="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
+                Return to Main Menu
+            </a>
+        </footer>
+    </div>
+
+</body>
+</html>

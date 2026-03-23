@@ -132,40 +132,36 @@ Here is the updated Project Structure section for your README.md. I have integra
 
 CS124P_IC/
 │
-├── app.py                    # Flask Web Server (Real-time & Upload UI)
-├── data_preprocessing.py     # tf.data pipeline, split, augmentation
-├── train_model.py            # MobileNetV2 transfer learning + fine-tuning
-├── model_evaluation.py       # Classification report + confusion matrix
-├── inference.py              # Single image + batch prediction script
-├── webcam_inference.py       # Real-time webcam classification (OpenCV)
+├── app.py                      # Flask Main Entry (Web Server)
+├── waste_classifier_mobilenetv2.keras  # Final Trained Model
+├── requirements.txt            # Dependencies
+├── .gitignore                  # Git exclusion rules
+├── README.md                   # Documentation
+├── prediction_result.png       # Last inference visual result
 │
-├── templates/                # Flask HTML templates
-│   └── index.html            # Responsive AI Dashboard (Tailwind CSS)
+├── scripts/                    # Core Logic & Pipelines
+│   ├── data_preprocessing.py   # tf.data pipeline, splits, & augmentation
+│   ├── train_model.py          # MobileNetV2 Transfer Learning logic
+│   ├── model_evaluation.py     # Metrics, Reports & Confusion Matrix
+│   ├── manual_upload.py        # Logic for processing file uploads
+│   └── livecam_classification.py # Backend logic for the real-time stream
 │
-├── archive/                  # Raw Kaggle dataset (not pushed to GitHub)
-│   └── standardized_384/     # Pre-resized 384×384 images
-│       ├── battery/
-│       ├── biological/
-│       └── ...
+├── static/                     # Web Assets (Images/CSS/JS)
+│   ├── manual_dataset/         # Library of internal test images
+│   └── uploads/                # Temporary storage for user-uploaded images
 │
-├── dataset_split/            # Auto-generated train/val/test split (gitignored)
-│   ├── train/
-│   ├── val/
-│   └── test/
+├── templates/                  # Flask HTML UI
+│   ├── home.html               # Main Dashboard
+│   ├── live.html               # Real-time Webcam UI
+│   └── manual.html             # Manual Analysis/Batch UI
 │
-├── manual_dataset/           # Personal test images
-│   ├── battery.jpg
-│   ├── plastic.jpg
-│   └── ...
+├── archive/                    # Raw Dataset (Excluded from Git)
+│   └── standardized_384/       # Subfolders by waste class
 │
-├── waste_classifier_mobilenetv2.keras   # Trained model
-├── confusion_matrix.png                 # Evaluation plot
-├── training_history.png                 # Training curves
-├── prediction_result.png                # Last inference result
-│
-├── requirements.txt          # Python dependencies (now includes Flask)
-├── .gitignore
-└── README.md
+├── dataset_split/              # Auto-generated Split Folders
+    ├── train/                  # 70% of data
+    ├── val/                    # 15% of data
+    └── test/                   # 15% of data
 ```
 
 ---

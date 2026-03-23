@@ -6,9 +6,9 @@
     <title>EcoScan | Real-Time Waste AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-900 text-white min-h-screen font-sans">
+<body class="bg-slate-900 text-white min-h-screen font-sans p-4 md:p-8">
 
-    <div class="max-w-5xl mx-auto px-4 py-6 md:py-12">
+    <div class="max-w-5xl mx-auto flex flex-col min-h-[90vh]">
         <header class="flex items-center justify-between mb-8">
             <div>
                 <h1 class="text-3xl font-black tracking-tighter text-green-400">ECOSCAN <span class="text-white">AI</span></h1>
@@ -19,7 +19,7 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow">
             
             <div class="lg:col-span-2 relative">
                 <div class="rounded-3xl overflow-hidden border-4 border-slate-800 shadow-2xl bg-black aspect-video flex items-center justify-center">
@@ -51,6 +51,14 @@
                 </div>
             </div>
         </div>
+
+        <footer class="mt-12 mb-8">
+            <a href="{{ url_for('index') }}" 
+               class="inline-flex items-center justify-center px-8 py-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl font-bold transition-all duration-200 group">
+                <span class="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
+                Return to Main Menu
+            </a>
+        </footer>
     </div>
 
     <script>
