@@ -1,0 +1,65 @@
+{# =============================================================================
+   templates/partials/info_card.html
+   Reusable disposal info card — included in both live.html and manual.html
+   Usage: {% include 'partials/info_card.html' %}
+   Expects: `info` variable (dict from WASTE_INFO) and `predicted_class`
+============================================================================= #}
+
+{% if info %}
+<div class="info-card" id="infoCard">
+
+  {# ── Header ── #}
+  <div class="info-card__header" style="border-left: 5px solid {{ info.bin_hex }};">
+    <span class="info-card__icon">{{ info.icon }}</span>
+    <div class="info-card__title-group">
+      <h2 class="info-card__title">{{ info.title }}</h2>
+      <span class="info-card__bin" style="background: {{ info.bin_hex }};">
+        🗑 {{ info.bin_color }} Bin
+      </span>
+      <span class="info-card__badge badge--{{ info.hazard_badge }}">
+        {% if info.hazard_level == 'HIGH' %}⚠️ High Hazard
+        {% elif info.hazard_level == 'MEDIUM' %}⚡ Medium Hazard
+        {% else %}✅ Low Hazard{% endif %}
+      </span>
+    </div>
+  </div>
+
+  {# ── Warning Banner ── #}
+  {% if info.hazard_level != 'LOW' %}
+  <div class="info-card__warning">
+    <span>⚠️</span>
+    <p>{{ info.warning }}</p>
+  </div>
+  {% else %}
+  <div class="info-card__notice">
+    <span>ℹ️</span>
+    <p>{{ info.warning }}</p>
+  </div>
+  {% endif %}
+
+  {# ── Disposal Steps ── #}
+  <div class="info-card__section">
+    <h3 class="info-card__section-title">♻️ How to Dispose Properly</h3>
+    <ol class="info-card__steps">
+      {% for step in info.steps %}
+      <li class="info-card__step">{{ step }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  {# ── Fun Fact ── #}
+  <div class="info-card__fact">
+    <span class="info-card__fact-icon">💡</span>
+    <p><strong>Did you know?</strong> {{ info.fun_fact }}</p>
+  </div>
+
+  {# ── YouTube Link ── #}
+  <a class="info-card__youtube" href="{{ info.youtube_url }}" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+      <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.8 15.5V8.5l6.3 3.5-6.3 3.5z"/>
+    </svg>
+    {{ info.youtube_label }}
+  </a>
+
+</div>
+{% endif %}

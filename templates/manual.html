@@ -13,13 +13,15 @@
             <h1 class="text-3xl font-black tracking-tighter text-blue-400">ECOSCAN <span class="text-white">MANUAL</span></h1>
         </header>
 
+        <!-- ── TOP ROW: same as original ── -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
-            
+
+            <!-- LEFT: Upload + Batch -->
             <div class="space-y-6">
                 <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700">
                     <h2 class="text-lg font-bold mb-4">Upload Waste Image</h2>
                     <form action="{{ url_for('manual_mode') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-                        <input type="file" name="file" accept="image/*" 
+                        <input type="file" name="file" accept="image/*"
                                class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600">
                         <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 py-3 rounded-xl font-bold transition-colors">
                             Analyze Upload
@@ -31,34 +33,41 @@
                     <h2 class="text-lg font-bold mb-2">System Batch Test</h2>
                     <p class="text-slate-400 text-sm mb-4">Run the model against the internal test library.</p>
                     <form action="{{ url_for('manual_mode') }}" method="POST">
-                        <button type="submit" name="run_batch" value="true" class="w-full border border-slate-600 hover:bg-slate-700 py-3 rounded-xl font-bold transition-colors">
+                        <button type="submit" name="run_batch" value="true"
+                                class="w-full border border-slate-600 hover:bg-slate-700 py-3 rounded-xl font-bold transition-colors">
                             Run Library Batch
                         </button>
                     </form>
                 </div>
             </div>
 
+            <!-- RIGHT: Result panel (same as original) -->
             <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700">
                 {% if result %}
                     <div class="text-center mb-6">
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Analysis Result</p>
                         <img src="{{ image_url }}" class="mx-auto h-48 rounded-xl border-2 border-slate-700 mb-4 object-cover">
                         <h3 class="text-3xl font-black {{ 'text-orange-400' if result.is_uncertain else 'text-green-400' }} capitalize">
-                            {{ result.top1_class }}
+                            {{ result.info.icon if result.info else '' }} {{ result.top1_class }}
                         </h3>
                         <p class="text-slate-400">{{ result.top1_confidence }}% Confidence</p>
+                        {% if result.is_uncertain %}
+                        <span class="inline-block mt-2 text-xs font-bold px-3 py-1 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full">
+                            ⚠️ Low Confidence
+                        </span>
+                        {% endif %}
                     </div>
 
                     <div class="space-y-3">
                         <h4 class="text-xs font-bold text-slate-500 uppercase">Confidence Breakdown</h4>
-                        {% for class, conf in result.top3 %}
+                        {% for cls, conf in result.top3 %}
                         <div class="space-y-1">
                             <div class="flex justify-between text-xs">
-                                <span class="capitalize">{{ class }}</span>
+                                <span class="capitalize">{{ cls }}</span>
                                 <span>{{ conf }}%</span>
                             </div>
                             <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-blue-500 h-full w-[{{ conf }}%]"></div>
+                                <div class="bg-blue-500 h-full" style="width:{{ conf }}%"></div>
                             </div>
                         </div>
                         {% endfor %}
@@ -68,13 +77,24 @@
                     <h2 class="text-lg font-bold mb-4">Batch Results</h2>
                     <div class="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
                         {% for item in batch_results %}
-                        <div class="bg-slate-900 p-2 rounded-xl border border-slate-700 text-center">
+                        <div class="bg-slate-900 p-2 rounded-xl border border-slate-700 text-center cursor-pointer hover:border-blue-500 transition-colors"
+                             onclick="openModal({{ loop.index0 }})">
                             <img src="{{ item.url }}" class="h-20 w-full object-cover rounded-lg mb-2">
-                            <p class="text-[10px] font-bold truncate capitalize">{{ item.top1_class }}</p>
+                            <p class="text-[10px] font-bold truncate capitalize">
+                                {{ item.info.icon if item.info else '' }} {{ item.top1_class }}
+                            </p>
                             <p class="text-[9px] text-slate-500">{{ item.top1_confidence }}%</p>
+                            {% if item.info %}
+                            <span class="inline-block mt-1 text-[8px] font-bold px-1.5 py-0.5 rounded text-white"
+                                  style="background: {{ item.info.bin_hex }}">
+                                {{ item.info.bin_color }} Bin
+                            </span>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
+                    <p class="text-xs text-slate-600 mt-3">Click any card for disposal instructions.</p>
+
                 {% else %}
                     <div class="h-full flex flex-col items-center justify-center text-slate-600 py-20">
                         <span class="text-5xl mb-4">🖼️</span>
@@ -84,14 +104,160 @@
             </div>
         </div>
 
+        <!-- ── DISPOSAL INFO CARD (new — shown after single upload result) ── -->
+        {% if result and result.info %}
+        {% set info = result.info %}
+        <div class="mt-6">
+
+            <!-- Header -->
+            <div class="bg-slate-800/50 rounded-t-3xl border border-slate-700 border-b-0 p-5 flex items-center gap-4"
+                 style="border-left: 4px solid {{ info.bin_hex }}">
+                <span class="text-4xl">{{ info.icon }}</span>
+                <div class="flex flex-col gap-1.5">
+                    <h2 class="text-xl font-black">{{ info.title }}</h2>
+                    <div class="flex gap-2 flex-wrap">
+                        <span class="text-xs font-bold px-2 py-0.5 rounded text-white"
+                              style="background: {{ info.bin_hex }}">
+                            🗑 {{ info.bin_color }} Bin
+                        </span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded
+                            {% if info.hazard_level == 'HIGH' %}bg-red-500/20 text-red-400
+                            {% elif info.hazard_level == 'MEDIUM' %}bg-yellow-500/20 text-yellow-400
+                            {% else %}bg-green-500/20 text-green-400{% endif %}">
+                            {% if info.hazard_level == 'HIGH' %}⚠️ High Hazard
+                            {% elif info.hazard_level == 'MEDIUM' %}⚡ Medium Hazard
+                            {% else %}✅ Low Hazard{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="bg-slate-800/50 border border-slate-700 border-t-0 rounded-b-3xl overflow-hidden">
+
+                <!-- Warning -->
+                <div class="px-5 py-3 flex gap-3 items-start text-sm border-b border-slate-700
+                    {% if info.hazard_level != 'LOW' %}bg-red-500/10 text-red-300{% else %}bg-blue-500/10 text-blue-300{% endif %}">
+                    <span class="mt-0.5 flex-shrink-0">{% if info.hazard_level != 'LOW' %}⚠️{% else %}ℹ️{% endif %}</span>
+                    <p>{{ info.warning }}</p>
+                </div>
+
+                <!-- Steps + Fact -->
+                <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-700">
+
+                    <div class="p-5">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">♻️ How to Dispose Properly</h3>
+                        <ol class="space-y-2 list-decimal list-inside text-sm text-slate-300 leading-relaxed">
+                            {% for step in info.steps %}
+                            <li>{{ step }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+
+                    <div class="p-5 flex flex-col justify-between gap-4">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">💡 Did You Know?</h3>
+                            <p class="text-sm text-slate-300 leading-relaxed">{{ info.fun_fact }}</p>
+                        </div>
+                        <a href="{{ info.youtube_url }}" target="_blank" rel="noopener"
+                           class="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors">
+                            <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 flex-shrink-0">
+                                <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.8 15.5V8.5l6.3 3.5-6.3 3.5z"/>
+                            </svg>
+                            {{ info.youtube_label }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ── BATCH MODAL (popup for disposal info on batch card click) ── -->
+        {% if batch_results %}
+        <div id="modalOverlay" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+             onclick="closeModal(event)">
+            <div id="modalBox" class="bg-slate-800 border border-slate-700 rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto">
+                <div class="flex justify-end p-4 pb-0">
+                    <button onclick="closeModalDirect()" class="text-slate-500 hover:text-white text-xl px-2">✕</button>
+                </div>
+                <div id="modalContent" class="pb-4"></div>
+            </div>
+        </div>
+
+        <script>
+            const BATCH_DATA = {{ batch_results | tojson }};
+
+            const HAZARD = {
+                HIGH:   { bg: 'bg-red-500/20',    text: 'text-red-400',    label: '⚠️ High Hazard' },
+                MEDIUM: { bg: 'bg-yellow-500/20',  text: 'text-yellow-400', label: '⚡ Medium Hazard' },
+                LOW:    { bg: 'bg-green-500/20',   text: 'text-green-400',  label: '✅ Low Hazard' },
+            };
+
+            function openModal(idx) {
+                const item = BATCH_DATA[idx];
+                const info = item.info;
+                if (!info) return;
+
+                const h         = HAZARD[info.hazard_level] || HAZARD.LOW;
+                const isHigh    = info.hazard_level !== 'LOW';
+                const warnClass = isHigh ? 'bg-red-500/10 text-red-300' : 'bg-blue-500/10 text-blue-300';
+                const stepsHtml = info.steps.map(s => `<li class="leading-relaxed">${s}</li>`).join('');
+
+                document.getElementById('modalContent').innerHTML = `
+                    <div class="px-5 pb-2 flex items-center gap-3 border-b border-slate-700 pb-4 mb-0"
+                         style="border-left: 4px solid ${info.bin_hex}; margin-left: 1rem;">
+                        <span class="text-3xl">${info.icon}</span>
+                        <div class="flex flex-col gap-1">
+                            <h2 class="text-lg font-black">${info.title}</h2>
+                            <div class="flex gap-2">
+                                <span class="text-xs font-bold px-2 py-0.5 rounded text-white" style="background:${info.bin_hex}">
+                                    🗑 ${info.bin_color} Bin
+                                </span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded ${h.bg} ${h.text}">${h.label}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-5 py-3 flex gap-3 items-start text-sm ${warnClass} border-b border-slate-700">
+                        <span class="flex-shrink-0">${isHigh ? '⚠️' : 'ℹ️'}</span>
+                        <p>${info.warning}</p>
+                    </div>
+                    <div class="p-5 border-b border-slate-700">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">♻️ How to Dispose</h3>
+                        <ol class="space-y-2 list-decimal list-inside text-sm text-slate-300">${stepsHtml}</ol>
+                    </div>
+                    <div class="p-5 border-b border-slate-700">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">💡 Did You Know?</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed">${info.fun_fact}</p>
+                    </div>
+                    <div class="p-5">
+                        <a href="${info.youtube_url}" target="_blank"
+                           class="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors">
+                            <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 flex-shrink-0">
+                                <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.8 15.5V8.5l6.3 3.5-6.3 3.5z"/>
+                            </svg>
+                            ${info.youtube_label}
+                        </a>
+                    </div>`;
+
+                document.getElementById('modalOverlay').classList.remove('hidden');
+            }
+
+            function closeModal(e) {
+                if (e.target === document.getElementById('modalOverlay')) closeModalDirect();
+            }
+            function closeModalDirect() {
+                document.getElementById('modalOverlay').classList.add('hidden');
+            }
+        </script>
+        {% endif %}
+
         <footer class="mt-12 mb-8">
-            <a href="{{ url_for('index') }}" 
+            <a href="{{ url_for('index') }}"
                class="inline-flex items-center justify-center px-8 py-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl font-bold transition-all duration-200 group">
-                <span class="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
+                <span class="mr-2 transition-transform group-hover:-translate-x-1">←</span>
                 Return to Main Menu
             </a>
         </footer>
     </div>
-
 </body>
 </html>

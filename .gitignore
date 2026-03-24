@@ -2,9 +2,6 @@
 archive/
 dataset_split/
 
-# Trained model (too large for GitHub — use Git LFS or Google Drive)
-*.keras
-*.h5
 
 # Generated output images (optional to push)
 confusion_matrix.png
