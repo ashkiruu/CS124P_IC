@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
 from sklearn.metrics import classification_report, confusion_matrix
-
+import json
 from data_preprocessing import preprocess_pipeline, CONFIG
 
 
@@ -252,6 +252,12 @@ def print_top_misclassifications(raw_cm, class_names: list, top_n: int = 5):
 # =============================================================================
 
 def evaluate_pipeline(model_path: str = "waste_classifier_mobilenetv2.keras"):
+    import os
+
+    # 1. Dynamically find the "static" folder path
+    # This looks at where THIS script is, goes up one level, and finds /static
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    static_dir = os.path.join(base_dir, "static")
 
     # --- Load preprocessed test dataset ---
     _, _, test_ds, class_names = preprocess_pipeline(CONFIG)
@@ -275,7 +281,45 @@ def evaluate_pipeline(model_path: str = "waste_classifier_mobilenetv2.keras"):
     print_top_misclassifications(raw_cm, class_names, top_n=5)
 
     # --- Plot ---
+    # Note: Inside plot_confusion_matrix, you have plt.savefig("confusion_matrix.png")
+    # We will override that here to ensure it goes to the right folder.
     plot_confusion_matrix(raw_cm, norm_cm, class_names)
+    
+    # --- SAVE ASSETS FOR WEB DASHBOARD ---
+    
+    # Save the Image
+    img_path = os.path.join(static_dir, "confusion_matrix.png")
+    plt.savefig(img_path, dpi=150, bbox_inches="tight")
+    print(f"Confusion matrix saved to: {img_path}")
+
+    def save_web_assets(raw_cm, y_true, y_pred, class_names, target_dir):
+        mistakes = []
+        for i in range(len(class_names)):
+            for j in range(len(class_names)):
+                if i != j and raw_cm[i, j] > 0:
+                    mistakes.append({
+                        "true": class_names[i],
+                        "pred": class_names[j],
+                        "count": int(raw_cm[i, j])
+                    })
+        mistakes.sort(key=lambda x: x['count'], reverse=True)
+
+        web_data = {
+            "overall_acc": round(np.mean(y_true == y_pred) * 100, 1),
+            "total_samples": int(len(y_true)),
+            "class_labels": class_names,
+            "class_accs": [round((raw_cm[i,i]/raw_cm[i].sum())*100, 1) for i in range(len(class_names))],
+            "top_mistakes": mistakes[:3] 
+        }
+
+        # Save the JSON
+        json_path = os.path.join(target_dir, "evaluation_stats.json")
+        with open(json_path, 'w') as f:
+            json.dump(web_data, f)
+        print(f"Web stats saved to: {json_path}")
+
+    # Call the save function using our dynamic directory
+    save_web_assets(raw_cm, y_true, y_pred, class_names, static_dir)
 
     return y_true, y_pred, raw_cm, class_names
 

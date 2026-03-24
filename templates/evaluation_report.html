@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoScan AI | Model Evaluation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto flex flex-col min-h-[90vh]">
+        <header class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter text-green-400">ECOSCAN <span class="text-white">AI</span></h1>
+                <p class="text-slate-400 text-sm">Model Performance & Analytics</p>
+            </div>
+            <div class="hidden md:block px-4 py-1 bg-slate-800 rounded-full border border-slate-700 text-xs text-purple-400">
+                📊 LIVE EVALUATION DATA
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 text-center">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Overall Accuracy</span>
+                <div class="text-4xl font-black text-green-400 mt-2">{{ stats.overall_acc }}%</div>
+            </div>
+            <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 text-center">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Samples Tested</span>
+                <div class="text-4xl font-black text-white mt-2">{{ stats.total_samples }}</div>
+            </div>
+            <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 text-center">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Model Architecture</span>
+                <div class="text-lg font-bold text-slate-300 mt-4 uppercase">MobileNetV2</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-8">
+                <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700">
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Per-Class Accuracy (%)</h2>
+                    <div class="h-64 w-full">
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-slate-800/50 p-6 rounded-3xl border border-slate-700">
+                    <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Top Misclassifications</h2>
+                    <div class="space-y-3">
+                        {% for mistake in stats.top_mistakes %}
+                        <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-700/50 text-sm">
+                            <span class="text-slate-300">{{ mistake.true }} <span class="text-red-500 mx-1">→</span> {{ mistake.pred }}</span>
+                            <span class="text-orange-400 font-bold">{{ mistake.count }}x</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="bg-blue-500/10 p-6 rounded-3xl border border-blue-500/20">
+                    <h3 class="text-blue-400 font-bold mb-2 text-sm uppercase tracking-tight">Performance Note</h3>
+                    <p class="text-[11px] text-blue-200/70 leading-relaxed uppercase tracking-widest">
+                        This data is generated from the latest <code class="text-blue-300">model_evaluation.py</code> execution.
+                        Lower accuracy in specific classes suggests a need for more diverse training images in those categories.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-auto pt-12 mb-8">
+            <a href="{{ url_for('index') }}" 
+               class="inline-flex items-center justify-center px-8 py-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl font-bold transition-all duration-200 group">
+                <span class="mr-2 transition-transform group-hover:-translate-x-1">←</span> 
+                Return to Main Menu
+            </a>
+        </footer>
+    </div>
+
+    <script>
+        // We wrap these in quotes and use JSON.parse to keep the VS Code linter happy
+        // 'safe' tells Jinja not to escape the quotes inside the JSON
+        const classLabels = JSON.parse('{{ stats.class_labels | tojson | safe }}');
+        const classData = JSON.parse('{{ stats.class_accs | tojson | safe }}');
+
+        const ctx = document.getElementById('accuracyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: classLabels,
+                datasets: [{
+                    label: 'Accuracy %',
+                    data: classData,
+                    backgroundColor: (context) => {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value < 85 ? 'rgba(249, 115, 22, 0.6)' : 'rgba(74, 222, 128, 0.6)';
+                    },
+                    borderColor: (context) => {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value < 85 ? '#f97316' : '#4ade80';
+                    },
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#64748b', font: { size: 10 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { weight: 'bold', size: 10 } }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

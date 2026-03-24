@@ -19,13 +19,18 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# CONFIGURATION
+# CONFIGURATION (Updated with Absolute Paths)
 # =============================================================================
 
+# Calculate the absolute path to the project root (CS124P_IC)
+# This assumes the script is located in CS124P_IC/scripts/
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 CONFIG = {
-    "dataset_root": r"archive\standardized_384",         # Root folder with class subfolders
-    "split_output":  "dataset_split/",   # Where train/val/test folders go
-    "img_size":      (224, 224),          # MobileNetV2-compatible input size
+    # Convert Paths to strings for TensorFlow compatibility
+    "dataset_root": str(PROJECT_ROOT / "archive" / "standardized_384"), 
+    "split_output": str(PROJECT_ROOT / "dataset_split"), 
+    "img_size":      (224, 224),          
     "batch_size":    32,
     "splits": {
         "train": 0.70,
@@ -73,12 +78,7 @@ def collect_valid_images(class_dir: str) -> list:
 
 def split_dataset(config: dict) -> str:
     """
-    Copies images from the raw dataset root into:
-        dataset_split/train/<class>/
-        dataset_split/val/<class>/
-        dataset_split/test/<class>/
-
-    Skips if the split directory already exists (safe to re-run).
+    Copies images from the raw dataset root into train/val/test folders.
     """
     src_root = config["dataset_root"]
     dst_root = config["split_output"]
@@ -87,9 +87,18 @@ def split_dataset(config: dict) -> str:
 
     assert abs(sum(splits.values()) - 1.0) < 1e-6, "Split ratios must sum to 1.0"
 
-    if os.path.exists(dst_root):
-        logger.info(f"Split directory already exists at '{dst_root}'. Skipping.")
+    # Robust check: Ensure destination exists and has actual content
+    if os.path.exists(dst_root) and any(os.scandir(dst_root)):
+        logger.info(f"Split directory already populated at '{dst_root}'. Skipping split phase.")
         return dst_root
+    
+    # Clean up empty/broken destination folder before starting
+    if os.path.exists(dst_root):
+        shutil.rmtree(dst_root)
+
+    logger.info(f"Checking source dataset at: '{src_root}'")
+    if not os.path.exists(src_root):
+         raise FileNotFoundError(f"Source dataset not found at: {src_root}. Please ensure 'archive/standardized_384' exists.")
 
     random.seed(seed)
     class_names = sorted([
@@ -103,10 +112,15 @@ def split_dataset(config: dict) -> str:
     logger.info(f"Found {len(class_names)} classes: {class_names}")
 
     for class_name in class_names:
-        images = collect_valid_images(os.path.join(src_root, class_name))
+        class_path = os.path.join(src_root, class_name)
+        images = collect_valid_images(class_path)
         random.shuffle(images)
 
         n_total = len(images)
+        if n_total == 0:
+             logger.warning(f"No valid images found for class '{class_name}' in {class_path}.")
+             continue
+
         n_train = int(n_total * splits["train"])
         n_val   = int(n_total * splits["val"])
 
@@ -135,19 +149,13 @@ def split_dataset(config: dict) -> str:
 
 # =============================================================================
 # STEP 3: AUGMENTATION LAYERS (training only)
-# Applied inside the tf.data pipeline — runs on GPU automatically
 # =============================================================================
 
 def build_augmentation_layer():
-    """
-    Returns a Sequential augmentation model applied ONLY during training.
-    Using Keras layers instead of ImageDataGenerator gives GPU acceleration
-    and is the recommended modern approach.
-    """
     return tf.keras.Sequential([
-        tf.keras.layers.RandomRotation(factor=0.056),   # ≈ ±20 degrees (20/360)
-        tf.keras.layers.RandomZoom(height_factor=0.2),  # zoom up to 20%
-        tf.keras.layers.RandomFlip("horizontal"),        # horizontal flip
+        tf.keras.layers.RandomRotation(factor=0.056),
+        tf.keras.layers.RandomZoom(height_factor=0.2),
+        tf.keras.layers.RandomFlip("horizontal"),
     ], name="augmentation")
 
 
@@ -156,32 +164,21 @@ def build_augmentation_layer():
 # =============================================================================
 
 def build_datasets(config: dict, split_dir: str):
-    """
-    Loads images from split folders using image_dataset_from_directory,
-    then builds optimized tf.data pipelines for train, val, and test.
-
-    Pipeline steps:
-        1. Load & decode images (handled by image_dataset_from_directory)
-        2. Normalize pixel values to [0, 1]
-        3. Apply augmentation to training set only
-        4. Cache, shuffle, prefetch for performance
-    """
     img_size   = config["img_size"]
     batch_size = config["batch_size"]
     seed       = config["seed"]
 
     AUTOTUNE = tf.data.AUTOTUNE
 
-    # ------------------------------------------------------------------
-    # Load raw datasets (images are resized and batched automatically)
-    # label_mode='categorical' → one-hot encoded labels (for softmax)
-    # ------------------------------------------------------------------
     def load_split(subset: str, shuffle: bool):
+        target_dir = os.path.join(split_dir, subset)
+        logger.info(f"Loading {subset} dataset from: {target_dir}")
+        
         return tf.keras.utils.image_dataset_from_directory(
-            directory=os.path.join(split_dir, subset),
+            directory=target_dir,
             image_size=img_size,
             batch_size=batch_size,
-            label_mode="categorical",   # one-hot labels for multi-class
+            label_mode="categorical",
             shuffle=shuffle,
             seed=seed,
         )
@@ -190,53 +187,20 @@ def build_datasets(config: dict, split_dir: str):
     raw_val   = load_split("val",   shuffle=False)
     raw_test  = load_split("test",  shuffle=False)
 
-    # Capture class names before pipeline transforms strip them
     class_names = raw_train.class_names
 
-    # ------------------------------------------------------------------
-    # Normalization layer — learned from training data only
-    # Rescales pixel values from [0, 255] → [0, 1]
-    # NOTE: For MobileNetV2, swap this with:
-    #   tf.keras.applications.mobilenet_v2.preprocess_input  (→ [-1, 1])
-    # ------------------------------------------------------------------
     augmentation  = build_augmentation_layer()
 
     def preprocess_train(images, labels):
-    # No normalization here — model handles it via preprocess_input internally
         images = augmentation(images, training=True)
         return images, labels
 
-
-
     def preprocess_eval(images, labels):
-        # No normalization here — model handles it via preprocess_input internally
         return images, labels
 
-    # ------------------------------------------------------------------
-    # Build optimized pipelines
-    # .cache()    → keeps dataset in memory after first epoch (faster)
-    # .prefetch() → overlaps data loading with model training
-    # ------------------------------------------------------------------
-    train_ds = (
-        raw_train
-        .map(preprocess_train, num_parallel_calls=AUTOTUNE)
-        .cache()
-        .prefetch(AUTOTUNE)
-    )
-
-    val_ds = (
-        raw_val
-        .map(preprocess_eval, num_parallel_calls=AUTOTUNE)
-        .cache()
-        .prefetch(AUTOTUNE)
-    )
-
-    test_ds = (
-        raw_test
-        .map(preprocess_eval, num_parallel_calls=AUTOTUNE)
-        .cache()
-        .prefetch(AUTOTUNE)
-    )
+    train_ds = raw_train.map(preprocess_train, num_parallel_calls=AUTOTUNE).cache().prefetch(AUTOTUNE)
+    val_ds   = raw_val.map(preprocess_eval, num_parallel_calls=AUTOTUNE).cache().prefetch(AUTOTUNE)
+    test_ds  = raw_test.map(preprocess_eval, num_parallel_calls=AUTOTUNE).cache().prefetch(AUTOTUNE)
 
     return train_ds, val_ds, test_ds, class_names
 
@@ -246,9 +210,6 @@ def build_datasets(config: dict, split_dir: str):
 # =============================================================================
 
 def print_summary(train_ds, val_ds, test_ds, class_names: list, config: dict):
-    """
-    Prints class indices and sample counts per split.
-    """
     def count_samples(ds):
         return sum(labels.shape[0] for _, labels in ds)
 
@@ -257,7 +218,7 @@ def print_summary(train_ds, val_ds, test_ds, class_names: list, config: dict):
     n_test  = count_samples(test_ds)
 
     print("\n" + "=" * 55)
-    print("         DATASET SUMMARY")
+    print("        DATASET SUMMARY")
     print("=" * 55)
     print(f"  Number of classes : {len(class_names)}")
     print(f"  Image size        : {config['img_size']}")
@@ -279,14 +240,6 @@ def print_summary(train_ds, val_ds, test_ds, class_names: list, config: dict):
 # =============================================================================
 
 def preprocess_pipeline(config: dict):
-    """
-    Full preprocessing pipeline:
-        1. Split raw dataset into train / val / test folders
-        2. Build optimized tf.data pipelines
-        3. Print summary
-
-    Returns (train_ds, val_ds, test_ds, class_names)
-    """
     logger.info("Starting preprocessing pipeline...")
 
     split_dir = split_dataset(config)

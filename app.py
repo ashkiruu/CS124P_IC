@@ -106,6 +106,27 @@ def data():
     """API endpoint for live.html JavaScript updates."""
     return jsonify(last_results)
 
+import json
+
+@app.route('/evaluation')
+def evaluation_report():
+    import json
+    import os
+    
+    json_path = os.path.join(app.static_folder, 'evaluation_stats.json')
+    
+    # Safety fallback if the script hasn't been run yet
+    if not os.path.exists(json_path):
+        stats = {
+            "overall_acc": 0, "total_samples": 0, 
+            "class_labels": [], "class_accs": [], "top_mistakes": []
+        }
+    else:
+        with open(json_path, 'r') as f:
+            stats = json.load(f)
+            
+    return render_template('evaluation_report.html', stats=stats)
+
 @app.route('/manual', methods=['GET', 'POST'])
 def manual_mode():
     result = None
